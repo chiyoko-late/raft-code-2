@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     ip[3] = argv[5];
 
     /* ソケットを作成 */
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
     {
         sock[i] = socket(AF_INET, SOCK_STREAM, 0);
         if (sock[i] < 0)
