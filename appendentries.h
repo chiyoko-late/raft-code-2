@@ -15,7 +15,7 @@
 #include "my_sock.h"
 
 #define SERVER_ADDR "0.0.0.0"
-#define STRING_MAX (100L)
+#define STRING_MAX (1000L)
 #define ALL_ACCEPTED_ENTRIES (1000L)
 #define ONCE_SEND_ENTRIES (100L)
 
