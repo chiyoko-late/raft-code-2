@@ -15,8 +15,8 @@
 #include "my_sock.h"
 
 #define SERVER_ADDR "0.0.0.0"
-#define STRING_MAX (1000L * 100)
-#define ALL_ACCEPTED_ENTRIES (1000L * 1000)
+#define STRING_MAX (1000L * 1)
+#define ALL_ACCEPTED_ENTRIES (1000L * 100)
 #define ONCE_SEND_ENTRIES (1000L * 10)
 
 uint64_t c1,
@@ -68,6 +68,15 @@ struct AllServer_PersistentState
     struct LOG log[ALL_ACCEPTED_ENTRIES];
 };
 
+// struct temp_log
+// {
+//     int currentTerm;
+//     int voteFor;
+//     // struct LOG log[1];
+//     char entry[STRING_MAX];
+//     int term;
+// };
+
 struct AllServer_VolatileState
 {
     int commitIndex;
@@ -84,17 +93,23 @@ struct Leader_VolatileState
 char *filename;
 char *logfilename;
 
+int fdo;
 // // logfile初期化
 void make_logfile(char *name)
 {
-    FILE *logfile;
 
     filename = name;
 
     // sprintf(filename, sizeof(filename), "%s.dat", name);
-    logfile = fopen(filename, "wb+");
-    fclose(logfile);
+    // logfile = fopen(filename, "wb+");
 
+    fdo = open(filename, (O_CREAT | O_RDWR), 0644);
+    if (fdo == -1)
+    {
+        printf("file open error\n");
+        exit(1);
+    }
+    printf("fdo: %d\n", fdo);
     return;
 }
 
@@ -103,23 +118,17 @@ void write_log(
     int i,
     struct AllServer_PersistentState *AS_PS)
 {
-    FILE *logfile;
 
-    logfile = fopen(filename, "ab+"); // 追加読み書き
-    if (logfile == NULL)
-    {
-        printf("cannot write log\n");
-        exit(1);
-    }
-    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
-    {
-        fwrite(&AS_PS->currentTerm, sizeof(int), 1, logfile);
-        fwrite(&AS_PS->voteFor, sizeof(int), 1, logfile);
-        fwrite(&AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term, sizeof(int), 1, logfile);
+    // for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
+    // {
+    // fwrite(&AS_PS->currentTerm, sizeof(int), 1, logfile);
+    // fwrite(&AS_PS->voteFor, sizeof(int), 1, logfile);
+    // fwrite(&AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term, sizeof(int), 1, logfile);
+    // fwrite(&AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry, sizeof(char), STRING_MAX, logfile);
 
-        fwrite(&AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry, sizeof(char), STRING_MAX, logfile);
-    }
-    fclose(logfile);
+    write(fdo, AS_PS, sizeof(struct AllServer_PersistentState));
+    fsync(fdo);
+    // }
     return;
 }
 
@@ -127,23 +136,22 @@ void read_log(
     // char filename[],
     int i)
 {
-    FILE *logfile;
     struct AllServer_PersistentState *AS_PS = malloc(sizeof(struct AllServer_PersistentState));
 
-    logfile = fopen(filename, "rb");
-    fseek(logfile, 0L, SEEK_SET);
-    for (int j = 1; j < i; j++)
-    {
-        fseek(logfile, ((STRING_MAX + 12) * (ONCE_SEND_ENTRIES - 1)), SEEK_CUR);
-    }
-    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
-    {
-        fread(&(AS_PS->currentTerm), sizeof(int), 1, logfile);
-        fread(&(AS_PS->voteFor), sizeof(int), 1, logfile);
-        fread(&(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term), sizeof(int), 1, logfile);
+    lseek(fdo, sizeof(struct AllServer_PersistentState) * (i - 1), SEEK_SET);
+    // for (int j = 1; j < i; j++)
+    // {
+    // lseek(fdo, sizeof(struct AllServer_PersistentState) * j, SEEK_CUR);
+    // }
+    // for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
+    // {
+    // fread(&(AS_PS->currentTerm), sizeof(int), 1, logfile);
+    // fread(&(AS_PS->voteFor), sizeof(int), 1, logfile);
+    // fread(&(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term), sizeof(int), 1, logfile);
 
-        fread(&(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry), sizeof(char), STRING_MAX, logfile);
-    }
+    // fread(&(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry), sizeof(char), STRING_MAX, logfile);
+    read(fdo, AS_PS, sizeof(struct AllServer_PersistentState));
+    // }
     for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
         printf("[logfile] AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
@@ -152,8 +160,6 @@ void read_log(
 
         printf("[logfile] AS_PS->log[%ld].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
     }
-
-    fclose(logfile);
     return;
 }
 

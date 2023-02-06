@@ -16,8 +16,10 @@ int AppendEntriesRPC(
     /* AERPC_Aの設定 */
 
     AERPC_A->term = AS_PS->log[L_VS->nextIndex[0]].term;
+    // AERPC_A->term = 1;
     AERPC_A->prevLogIndex = L_VS->nextIndex[0] - 1;
     AERPC_A->prevLogTerm = AS_PS->log[AERPC_A->prevLogIndex].term;
+    // AERPC_A->prevLogTerm = 0;
     for (int i = 1; i < ONCE_SEND_ENTRIES; i++)
     {
         strcpy(AERPC_A->entries[i - 1].entry, AS_PS->log[L_VS->nextIndex[0] + (i - 1)].entry);
@@ -28,15 +30,18 @@ int AppendEntriesRPC(
 
     for (int i = 0; i < connectserver_num; i++)
     {
-        // send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument), 0);
+
         my_send(sock[i], AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
 
-        for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
-        {
-            // send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * MAX, 0);
-            my_send(sock[i], AERPC_A->entries[num - 1].entry, sizeof(char) * STRING_MAX);
-        }
-        printf("finish sending\n\n");
+        // for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
+        // {
+        //     // send(sock[i], AERPC_A->entries[num - 1], sizeof(char) * MAX, 0);
+        //     my_send(sock[i], AERPC_A->entries[num - 1].entry, sizeof(char) * STRING_MAX);
+        // }
+    }
+    printf("finish sending\n\n");
+    for (int i = 0; i < connectserver_num; i++)
+    {
         // recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result), MSG_WAITALL);
         my_recv(sock[i], AERPC_R, sizeof(struct AppendEntriesRPC_Result));
     }
@@ -73,15 +78,20 @@ int AppendEntriesRPC(
 
 int main(int argc, char *argv[])
 {
-    int port[5];
+    int port[4];
     port[0] = 1234;
     port[1] = 2345;
     port[2] = 3456;
     port[3] = 4567;
-    port[4] = 5678;
 
-    int sock[5];
-    struct sockaddr_in addr[5];
+    int sock[4];
+    struct sockaddr_in addr[4];
+
+    char *ip[4];
+    ip[0] = argv[2];
+    ip[1] = argv[3];
+    ip[2] = argv[4];
+    ip[3] = argv[5];
 
     /* ソケットを作成 */
     for (int i = 0; i < 5; i++)
@@ -94,22 +104,22 @@ int main(int argc, char *argv[])
         }
     }
 
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
     {
         memset(&addr[i], 0, sizeof(struct sockaddr_in));
     }
     /* サーバーのIPアドレスとポートの情報を設定 */
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
     {
         addr[i].sin_family = AF_INET;
         addr[i].sin_port = htons(port[i]);
-        addr[i].sin_addr.s_addr = htonl(INADDR_ANY);
+        addr[i].sin_addr.s_addr = inet_addr(ip[i]);
         const size_t addr_size = sizeof(addr);
     }
 
     int opt = 1;
     // ポートが解放されない場合, SO_REUSEADDRを使う
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
     {
         if (setsockopt(sock[i], SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt)) == -1)
         {
@@ -122,7 +132,7 @@ int main(int argc, char *argv[])
     // /* followerとconnect */
     int connectserver_num = 0;
     printf("Start connect...\n");
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
     {
         int k = 0;
         connect(sock[i], (struct sockaddr *)&addr[i], sizeof(struct sockaddr_in));
@@ -149,7 +159,7 @@ int main(int argc, char *argv[])
 
     AS_PS->currentTerm = 1;
     AS_PS->log[0].term = 0;
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < ALL_ACCEPTED_ENTRIES; i++)
     {
         memset(AS_PS->log[i].entry, 0, sizeof(char) * STRING_MAX);
     }
@@ -158,7 +168,7 @@ int main(int argc, char *argv[])
     AS_VS->commitIndex = 0;
     AS_VS->LastAppliedIndex = 0;
 
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
     {
         L_VS->nextIndex[i] = 1; // (AERPC_A->leaderCommit=0) + 1
         L_VS->matchIndex[i] = 0;
@@ -179,20 +189,22 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    printf("Input -> ");
-    scanf("%s", str);
+    // printf("Input -> ");
+    // scanf("%s", str);
 
     /* 接続済のソケットでデータのやり取り */
     // 今は受け取れるentryが有限
     for (int i = 1; i < (ALL_ACCEPTED_ENTRIES / ONCE_SEND_ENTRIES); i++)
     {
+        printf("Input -> ");
+        scanf("%s", str);
         /* followerに送る */
         /* AS_PSの更新 */
-        printf("%d", i);
-
+        // printf("%d", i);
         clock_gettime(CLOCK_MONOTONIC, &ts1);
         for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
         {
+
             /* log[0]には入れない。log[1]から始める。　first index is 1*/
             // AERPC_A->entries[0] = str;
             strcpy(AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry, str);
@@ -200,12 +212,16 @@ int main(int argc, char *argv[])
 
             // printf("AS_PS->log[%d].term = %d\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].term);
             // printf("AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
+
+            /* logを書き込み */
+            printf("AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
+            printf("AS_PS->voteFor = %d\n", AS_PS->voteFor);
+            printf(" AS_PS->log[%ld].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
+
+            printf("AS_PS->log[%ld].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
         }
-
-        /* logを書き込み */
-
-        // write_log(i, AS_PS);
-        // read_log(i);
+        write_log(i, AS_PS);
+        read_log(i);
 
         /* AS_VSの更新 */
         // AS_VS->commitIndex = ; ここの段階での変更は起きない
@@ -221,11 +237,16 @@ int main(int argc, char *argv[])
         clock_gettime(CLOCK_MONOTONIC, &ts2);
         t = ts2.tv_sec - ts1.tv_sec + (ts2.tv_nsec - ts1.tv_nsec) / 1e9;
 
-        fprintf(timerec, "%.4fs\n", t);
+        fprintf(timerec, "%.4f\n", t);
         // fwrite(&t, sizeof(double), 1, timerec);
         printf("%.4f\n", t);
     }
-    fclose(timerec);
+
+    /* ソケット通信をクローズ */
+    // for (int i = 0; i < 5; i++)
+    // {
+    //     close(sock[i]);
+    // }
 
     exit(0);
 }

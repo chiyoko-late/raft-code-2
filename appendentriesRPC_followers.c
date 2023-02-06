@@ -38,6 +38,8 @@ int consistency_check(
         return false;
     }
 
+    // printf("rpc->prevLogIndex = %d\n", rpc->prevLogIndex);
+
     // 4. Append any new entries not already in the log
     for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
     {
@@ -46,10 +48,11 @@ int consistency_check(
         strcpy(as_ps->log[rpc->prevLogIndex + num].entry, rpc->entries[num - 1].entry);
     }
 
+    // ここらへん変えてる途中。
     as_vs->LastAppliedIndex = rpc->prevLogIndex + ONCE_SEND_ENTRIES;
     /* log記述 */
     write_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1, as_ps);
-    // read_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1);
+    read_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1);
 
     // 5. If leaderCmakeommit> commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
     if (rpc->leaderCommit > as_vs->commitIndex)
@@ -70,13 +73,14 @@ int transfer(
 {
 
     /* クライアントから文字列を受信 */
+    // ここ変える
+    // recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument), MSG_WAITALL);
     my_recv(sock, AERPC_A, sizeof(struct AppendEntriesRPC_Argument));
 
-    for (int num = 1; num < ONCE_SEND_ENTRIES; num++)
-    {
-        my_recv(sock, AERPC_A->entries[num - 1].entry, sizeof(char) * STRING_MAX);
-    }
-    // output_AERPC_A(AERPC_A);
+    //     // recv(sock, AERPC_A->entries[num - 1], sizeof(char) * MAX, MSG_WAITALL);
+    //     my_recv(sock, AERPC_A->entries[num - 1].entry, sizeof(char) * STRING_MAX);
+    // }
+    // // output_AERPC_A(AERPC_A);
 
     // consistency check
     AERPC_R->success = consistency_check(AERPC_A, AS_PS, AS_VS);
@@ -88,6 +92,7 @@ int transfer(
     }
 
     // lerderに返答
+    // send(sock, AERPC_R, sizeof(struct AppendEntriesRPC_Result), 0);
     my_send(sock, AERPC_R, sizeof(struct AppendEntriesRPC_Result));
 
     /* 受信した文字列を表示 */
@@ -98,6 +103,7 @@ int transfer(
 
 int main(int argc, char *argv[])
 {
+
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0)
     {
@@ -153,7 +159,7 @@ int main(int argc, char *argv[])
 
     AS_PS->currentTerm = 0;
     AS_PS->log[0].term = 0;
-    for (int i = 0; i < 20; i++)
+    for (int i = 0; i < ALL_ACCEPTED_ENTRIES; i++)
     {
         memset(AS_PS->log[i].entry, 0, sizeof(char) * STRING_MAX);
     }
