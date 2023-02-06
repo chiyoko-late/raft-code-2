@@ -214,14 +214,14 @@ int main(int argc, char *argv[])
             // printf("AS_PS->log[%d].entry = %s\n\n", (i - 1) * (NUM - 1) + num, AS_PS->log[(i - 1) * (NUM - 1) + num].entry);
 
             /* logを書き込み */
-            printf("AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
-            printf("AS_PS->voteFor = %d\n", AS_PS->voteFor);
-            printf(" AS_PS->log[%ld].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
+            // printf("AS_PS->currentTerm = %d\n", AS_PS->currentTerm);
+            // printf("AS_PS->voteFor = %d\n", AS_PS->voteFor);
+            // printf(" AS_PS->log[%ld].term = %d\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].term);
 
-            printf("AS_PS->log[%ld].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
+            // printf("AS_PS->log[%ld].entry = %s\n\n", (i - 1) * (ONCE_SEND_ENTRIES - 1) + num, AS_PS->log[(i - 1) * (ONCE_SEND_ENTRIES - 1) + num].entry);
         }
         write_log(i, AS_PS);
-        read_log(i);
+        // read_log(i);
 
         /* AS_VSの更新 */
         // AS_VS->commitIndex = ; ここの段階での変更は起きない

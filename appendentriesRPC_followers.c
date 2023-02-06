@@ -52,7 +52,7 @@ int consistency_check(
     as_vs->LastAppliedIndex = rpc->prevLogIndex + ONCE_SEND_ENTRIES;
     /* log記述 */
     write_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1, as_ps);
-    read_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1);
+    // read_log(rpc->prevLogIndex / (ONCE_SEND_ENTRIES - 1) + 1);
 
     // 5. If leaderCmakeommit> commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
     if (rpc->leaderCommit > as_vs->commitIndex)
