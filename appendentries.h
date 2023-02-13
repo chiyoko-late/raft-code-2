@@ -16,8 +16,8 @@
 
 #define SERVER_ADDR "0.0.0.0"
 #define STRING_MAX (1000L*1000)
-#define ALL_ACCEPTED_ENTRIES (5000L)
-#define ONCE_SEND_ENTRIES (500L)
+#define ALL_ACCEPTED_ENTRIES (3000L)
+#define ONCE_SEND_ENTRIES (300L)
 
 uint64_t c1,
     c2;
